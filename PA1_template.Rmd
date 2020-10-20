@@ -1,25 +1,93 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research"
+author: "ludimila"
+date: "15/10/2020"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 
-## Loading and preprocessing the data
+```{r, echo = TRUE}
+knitr::opts_chunk$set(warning=FALSE)
+
+#require library
+
+library(ggplot2)
+
+#download file
+
+fileurl = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+if(!file.exists("./activity")){dir.create("./activity")}
+download.file(fileurl, destfile = "./activity.zip")
+
+#unzip and load data 
+
+unzip(zipfile = "./activity.zip", exdir = "./activity")
+
+activity <- read.csv("activity.csv")
 
 
+### 1 - What is mean number of steps taken per day?
 
-## What is mean total number of steps taken per day?
+TOTALstepday <- aggregate(steps~date, activity, sum)
+
+hist(TOTALstepday$steps, main = "Histogram of the Total Number of Steps taken Each Day", 
+     xlab = "Total Steps Per Day", ylab = "Frequency", col = "plum3", breaks = seq(0,25000, by=2500))
+
+#mean of the total number of steps taken per day
+
+mean(TOTALstepday$steps)
+
+#median of the total number of steps taken per day
+
+median(TOTALstepday$steps)
+
+## 2 - What is the average daily activity pattern?
+
+averagedailyact <- aggregate(steps~interval, activity, mean)
+
+with(averagedailyact, plot(interval, steps, type = "l", main = "Average number of steps per intervals",
+                           ylab = "Average number of steps", xlab = "Interval", col = "darkviolet"))
 
 
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
+#Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+     
+averagedailyact[which.max(averagedailyact[,2]),1]
 
 
+## 3 - Imputing missing values
 
-## Are there differences in activity patterns between weekdays and weekends?
+missingvalues <- is.na(activity[,1])
+  
+stepmeaninterval <- mean(averagedailyact$steps)
+
+activityfilled <- activity
+
+activityfilled[missingvalues,1] <- stepmeaninterval
+
+head(activityfilled)
+
+TOTALstepday_filled <- aggregate(steps~date, activityfilled, sum)
+
+hist(TOTALstepday_filled$steps, main = "Total number of steps taken each day (missing values imputed)", 
+     xlab = "Total steps per day", ylab = "Frequency", col = "plum3", breaks = seq(0,25000, by=2500))
+
+
+## 4 - Are there differences in activity patterns between weekdays and weekends? 
+
+
+activity$date <- as.Date(strptime(activity$date, format="%Y-%m-%d"))
+activity$datetype <- sapply(activity$date, function(x) {
+  if (weekdays(x) == "sábado" | weekdays(x) =="domingo") 
+  {y <- "Weekend"} else 
+  {y <- "Weekday"}
+  y
+})
+
+activityDATE <- aggregate(steps~interval + datetype, activity, mean, na.rm = TRUE)
+
+ggplot(activityDATE, aes(x = interval , y = steps, color = datetype)) +
+  geom_line() +
+  labs(title = "Average daily steps by type of date", x = "Interval", y = "Average number of steps") +
+  facet_wrap(~datetype, ncol = 1, nrow = 2)
